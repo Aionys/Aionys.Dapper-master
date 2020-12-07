@@ -38,7 +38,7 @@ namespace Aionys.Dapper
             int? commandTimeout = null,
             CommandType? commandType = null)
         {
-            return await RetryActionAsync(QueryNewConnectionAsync<T>(connectionString, sql, parameters, transaction, commandTimeout, commandType), retryLimit);
+            return await RetryActionAsync(() => QueryNewConnectionAsync<T>(connectionString, sql, parameters, transaction, commandTimeout, commandType), retryLimit);
         }
 
         public async Task<IEnumerable<T>> QueryAsync<T>(
@@ -50,7 +50,7 @@ namespace Aionys.Dapper
             int? commandTimeout = null,
             CommandType? commandType = null)
         {
-            return await RetryActionAsync(db.QueryAsync<T>(sql, parameters, transaction, commandTimeout, commandType), retryLimit);
+            return await RetryActionAsync(() => db.QueryAsync<T>(sql, parameters, transaction, commandTimeout, commandType), retryLimit);
         }
         #endregion
 
@@ -64,7 +64,7 @@ namespace Aionys.Dapper
             int? commandTimeout = null,
             CommandType? commandType = null)
         {
-            return await RetryActionAsync(QueryFirstOrDefaultNewConnectionAsync<T>(connectionString, sql, parameters, transaction, commandTimeout, commandType), retryLimit);
+            return await RetryActionAsync(() => QueryFirstOrDefaultNewConnectionAsync<T>(connectionString, sql, parameters, transaction, commandTimeout, commandType), retryLimit);
         }
 
         public async Task<T> QueryFirstOrDefaultAsync<T>(
@@ -76,7 +76,7 @@ namespace Aionys.Dapper
             int? commandTimeout = null,
             CommandType? commandType = null)
         {
-            return await RetryActionAsync(db.QueryFirstOrDefaultAsync<T>(sql, parameters, transaction, commandTimeout, commandType), retryLimit);
+            return await RetryActionAsync(() => db.QueryFirstOrDefaultAsync<T>(sql, parameters, transaction, commandTimeout, commandType), retryLimit);
         }
         #endregion
 
@@ -90,7 +90,7 @@ namespace Aionys.Dapper
             int? commandTimeout = null,
             CommandType? commandType = null)
         {
-            return await RetryActionAsync(ExecuteNewConnectionAsync(connectionString, sql, parameters, transaction, commandTimeout, commandType), retryLimit);
+            return await RetryActionAsync(() => ExecuteNewConnectionAsync(connectionString, sql, parameters, transaction, commandTimeout, commandType), retryLimit);
         }
 
         public async Task<int> ExecuteAsync(
@@ -102,17 +102,17 @@ namespace Aionys.Dapper
             int? commandTimeout = null,
             CommandType? commandType = null)
         {
-            return await RetryActionAsync(db.ExecuteAsync(sql, parameters, transaction, commandTimeout, commandType), retryLimit);
+            return await RetryActionAsync(() => db.ExecuteAsync(sql, parameters, transaction, commandTimeout, commandType), retryLimit);
         }
         #endregion
 
-        public async Task<T> RetryActionAsync<T>(Task<T> task, int? retryLimit = null)
+        public async Task<T> RetryActionAsync<T>(Func<Task<T>> task, int? retryLimit = null)
         {
             T result = default;
 
             await Retry.DoAsync(async (retryIteration, maxRetryCount) =>
             {
-                result = await task;
+                result = await task();
             }, _retryEvery, retryLimit ?? _retryLimit, onFailure: ((exception, retryIteration, maxRetryCount) =>
             {
                 _logger?.LogWarning(exception, $"Dapper retry #: {retryIteration + 1}");
